@@ -1,0 +1,9 @@
+{
+  "sum": 10.1,
+  "currency": "RUB",
+  "description": "normal-1",
+  "meta": {
+    "additionalProp1": "value"
+  },
+  "webhook_url": "http://webhook:8081/api/v1/webhook?key=1&status=success"
+}

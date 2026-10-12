@@ -1,0 +1,75 @@
+x-env: &env
+  DATABASE_DSN: ${DATABASE_DSN}
+  API_KEY: ${API_KEY}
+  RABBITMQ_DSN: ${RABBITMQ_DSN}
+  PROCESSOR_ERROR_RATE: ${PROCESSOR_ERROR_RATE}
+
+name: payments
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  migrations:
+    environment:
+      <<: *env
+    build: .
+    depends_on:
+      - postgres
+    command: ["alembic", "upgrade", "head"]
+
+  api:
+    build: .
+    environment:
+      <<: *env
+    depends_on:
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+
+  consumer:
+    build: .
+    environment:
+      <<: *env
+    depends_on:
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    command: ["faststream", "run", "payments.consumer:app"]
+
+  webhook:
+    environment:
+      <<: *env
+    build: .
+    command: ["uvicorn", "--host", "0.0.0.0", "--port", "8081", "payments.webhook:app"]
+
+
+volumes:
+  postgres_data:

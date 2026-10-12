@@ -1,0 +1,9 @@
+{
+  "sum": 10.1,
+  "currency": "RUB",
+  "description": "invalid-webhook",
+  "meta": {
+    "additionalProp1": "value"
+  },
+  "webhook_url": "http://unknown.invalid"
+}
